@@ -12,6 +12,7 @@ const SYMBOL_TO_COINGECKO_LOOKUP = {
   ETH: 'ethereum',
   WETH: 'ethereum',
   USDC: 'usd-coin',
+  DAI: 'dai',
 };
 
 const ADDRESS_TO_COVALENT_LOOKUP = {
@@ -21,18 +22,21 @@ const ADDRESS_TO_COVALENT_LOOKUP = {
   '0x326c977e6efc84e512bb9c30f76e30c160ed06fb': '0x514910771af9ca656af840dff83e8264ecf986ca', // LINK: Goerli -> ETH
   '0x4200000000000000000000000000000000000006': '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', // WETH: Optimism -> ETH
   '0x7F5c764cBc14f9669B88837ca1490cCa17c31607': '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', // USDC: Optimism -> ETH
+  '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1': '0x6b175474e89094c44da98b954eedeac495271d0f', // DAI: Optimism -> ETH
 };
 
 const CHAIN_GAS_PRICE_MULTIPLIERS = {
   1: 1,
   5: 0.2, // goerli, our estimates will say $6 for 2,300,000 gas limit but etherscan reports fractions of a penny
-  10: 0.2, // optimism
-  420: 0.2, // opt goerli
+  10: 1, // optimism
+  420: 1, // opt goerli
   11155111: 0.01, // if we want Sepolia to act more like Optimism/etc, set this to a fraction such as 0.1
   80001: 24, // mumbai seems to return a much cheaper gas price then it bills you for
 };
 
 const COVALENT_API_URL = 'https://api.covalenthq.com/v1';
+
+const marketRates = {};
 
 /**
  * Get the current feeData from chain
@@ -113,6 +117,11 @@ export const getEthMainnetTokenMarketRateUsd = async (
   tokenAddress?: string,
   covalentApiKey?: string,
 ): Promise<number> => {
+  // memoization
+  if (marketRates[symbol]) {
+    return marketRates[symbol];
+  }
+
   let marketRateUsd;
 
   try {
@@ -123,11 +132,14 @@ export const getEthMainnetTokenMarketRateUsd = async (
 
   try {
     if (!marketRateUsd && Boolean(tokenAddress) && Boolean(covalentApiKey)) {
+      console.log('COINGECKO FAIL, trying Covalent!');
       marketRateUsd = await getCovalentMarketRateUsd(tokenAddress, covalentApiKey);
     }
   } catch (err) {
     console.log(err);
   }
+
+  marketRates[symbol] = marketRateUsd;
 
   return marketRateUsd;
 };
@@ -198,7 +210,6 @@ export const getCovalentMarketRateUsd = async (
 
   return rateUsd;
 };
-
 const getDateXDaysAgo = (days: number) => {
   const date = new Date();
   date.setDate(date.getDate() - days);

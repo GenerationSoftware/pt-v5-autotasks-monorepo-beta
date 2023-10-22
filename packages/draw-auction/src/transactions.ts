@@ -1,7 +1,7 @@
 import { PopulatedTransaction } from '@ethersproject/contracts';
 import { Provider } from '@ethersproject/abstract-provider';
 import { RelayerParams } from 'defender-relay-client';
-import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js';
+import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js-beta';
 import {
   prepareDrawAuctionTxs,
   DrawAuctionConfigParams,

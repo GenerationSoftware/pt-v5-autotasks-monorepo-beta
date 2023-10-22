@@ -20,7 +20,7 @@ export default defineConfig((opt) => {
     },
     noExternal: [
       '@generationsoftware/pt-v5-autotasks-library',
-      '@generationsoftware/pt-v5-utils-js',
+      '@generationsoftware/pt-v5-utils-js-beta',
       'ethers-multicall-provider',
       'configstore',
     ],

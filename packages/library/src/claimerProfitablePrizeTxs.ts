@@ -7,7 +7,7 @@ import {
   getPrizePoolInfo,
   getContract,
   flagClaimedRpc,
-} from '@generationsoftware/pt-v5-utils-js';
+} from '@generationsoftware/pt-v5-utils-js-beta';
 import { Relayer } from 'defender-relay-client';
 import groupBy from 'lodash.groupby';
 import chalk from 'chalk';

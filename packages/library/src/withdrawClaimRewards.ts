@@ -1,7 +1,7 @@
 import { ethers, Contract, BigNumber } from 'ethers';
 import { PopulatedTransaction } from '@ethersproject/contracts';
 import { Provider } from '@ethersproject/providers';
-import { ContractsBlob, getContract } from '@generationsoftware/pt-v5-utils-js';
+import { ContractsBlob, getContract } from '@generationsoftware/pt-v5-utils-js-beta';
 import chalk from 'chalk';
 
 import { Token, WithdrawClaimRewardsConfigParams, WithdrawClaimRewardsContext } from './types';
@@ -11,11 +11,10 @@ import {
   logStringValue,
   printAsterisks,
   printSpacer,
-  parseBigNumberAsFloat,
-  MARKET_RATE_CONTRACT_DECIMALS,
   getFeesUsd,
   getNativeTokenMarketRateUsd,
   roundTwoDecimalPlaces,
+  getEthMainnetTokenMarketRateUsd,
 } from './utils';
 import { ERC20Abi } from './abis/ERC20Abi';
 import { NETWORK_NATIVE_TOKEN_INFO } from './utils/network';
@@ -35,32 +34,40 @@ export async function getWithdrawClaimRewardsTx(
   readProvider: Provider,
   params: WithdrawClaimRewardsConfigParams,
 ): Promise<PopulatedTransaction | undefined> {
-  const { chainId, rewardsRecipient, relayerAddress, minProfitThresholdUsd } = params;
+  const { chainId, rewardsRecipient, relayerAddress, minProfitThresholdUsd, covalentApiKey } =
+    params;
 
   const contractsVersion = {
     major: 1,
     minor: 0,
     patch: 0,
   };
-  const prizePool = getContract('PrizePool', chainId, readProvider, contracts, contractsVersion);
-  const marketRate = getContract('MarketRate', chainId, readProvider, contracts, contractsVersion);
+  const prizePoolContract = getContract(
+    'PrizePool',
+    chainId,
+    readProvider,
+    contracts,
+    contractsVersion,
+  );
 
-  if (!prizePool) {
+  if (!prizePoolContract) {
     throw new Error('WithdrawRewards: PrizePool Contract Unavailable');
   }
 
   // #1. Get context about the prize pool prize token, etc
   const context: WithdrawClaimRewardsContext = await getContext(
-    prizePool,
-    marketRate,
+    prizePoolContract,
     readProvider,
+    covalentApiKey,
   );
   printContext(context);
 
+  printAsterisks();
+
   // #2. Get data about how much rewards a prize claimer can withdraw
   printSpacer();
-  console.log(chalk.blue(`2. Getting claim rewards balance for '${relayerAddress}' ...`));
-  const amount = await prizePool.balanceOfClaimRewards(relayerAddress);
+  console.log(chalk.blue(`2. Getting claim rewards balance for relayer '${relayerAddress}' ...`));
+  const amount = await prizePoolContract.balanceOfClaimRewards(relayerAddress);
 
   logBigNumber(
     `${context.rewardsToken.symbol} balance:`,
@@ -76,6 +83,33 @@ export async function getWithdrawClaimRewardsTx(
     chalk.greenBright(`$${roundTwoDecimalPlaces(rewardsTokenUsd)}`),
   );
 
+  // #2b. Get data about how rewards balance for rewards recipient, and print note that they would need to withdraw it themselves
+  printSpacer();
+  console.log(
+    chalk.blue(`2. Getting claim rewards balance for rewards recipient '${rewardsRecipient}' ...`),
+  );
+  const rewardsRecipientAmount = await prizePoolContract.balanceOfClaimRewards(rewardsRecipient);
+
+  if (rewardsRecipientAmount.gt(0)) {
+    logBigNumber(
+      `${context.rewardsToken.symbol} balance:`,
+      rewardsRecipientAmount,
+      context.rewardsToken.decimals,
+      context.rewardsToken.symbol,
+    );
+    const rewardsRecipientRewardsTokenUsd =
+      parseFloat(ethers.utils.formatUnits(rewardsRecipientAmount, context.rewardsToken.decimals)) *
+      context.rewardsToken.assetRateUsd;
+    console.log(
+      chalk.dim(`${context.rewardsToken.symbol} balance (USD):`),
+      chalk.greenBright(`$${roundTwoDecimalPlaces(rewardsRecipientRewardsTokenUsd)}`),
+    );
+
+    printSpacer();
+    printNote();
+  }
+
+  // #3. Decide if profitable or not
   let populatedTx: PopulatedTransaction;
 
   const withdrawClaimRewardsParams: WithdrawClaimRewardsParams = {
@@ -83,10 +117,9 @@ export async function getWithdrawClaimRewardsTx(
     amount,
   };
 
-  // #3. Decide if profitable or not
   const profitable = await calculateProfit(
     chainId,
-    prizePool,
+    prizePoolContract,
     rewardsTokenUsd,
     withdrawClaimRewardsParams,
     readProvider,
@@ -100,7 +133,7 @@ export async function getWithdrawClaimRewardsTx(
     console.log(chalk.blue(`5. Creating transaction ...`));
 
     console.log(chalk.green('WithdrawClaimRewards: Add Populated Claim Tx'));
-    populatedTx = await prizePool.populateTransaction.withdrawClaimRewards(
+    populatedTx = await prizePoolContract.populateTransaction.withdrawClaimRewards(
       ...Object.values(withdrawClaimRewardsParams),
     );
   }
@@ -114,11 +147,11 @@ export async function getWithdrawClaimRewardsTx(
  * @returns {Promise} Promise of a WithdrawClaimRewardsContext object
  */
 const getContext = async (
-  prizePool: Contract,
-  marketRate: Contract,
+  prizePoolContract: Contract,
   readProvider: Provider,
+  covalentApiKey?: string,
 ): Promise<WithdrawClaimRewardsContext> => {
-  const rewardsTokenAddress = await prizePool.prizeToken();
+  const rewardsTokenAddress = await prizePoolContract.prizeToken();
 
   const tokenInContract = new ethers.Contract(rewardsTokenAddress, ERC20Abi, readProvider);
 
@@ -131,7 +164,11 @@ const getContext = async (
 
   const rewardsTokenWithRate = {
     ...rewardsToken,
-    assetRateUsd: await getRewardsTokenRateUsd(marketRate, rewardsToken),
+    assetRateUsd: await getEthMainnetTokenMarketRateUsd(
+      rewardsToken.symbol,
+      rewardsToken.address,
+      covalentApiKey,
+    ),
   };
 
   return { rewardsToken: rewardsTokenWithRate };
@@ -154,26 +191,12 @@ const printContext = (context) => {
 };
 
 /**
- * Finds the spot price of the reward token in USD
- * @returns {number} rewardTokenRateUsd
- */
-const getRewardsTokenRateUsd = async (
-  marketRate: Contract,
-  rewardToken: Token,
-): Promise<number> => {
-  const rewardTokenAddress = rewardToken.address;
-  const rewardTokenRate = await marketRate.priceFeed(rewardTokenAddress, 'USD');
-
-  return parseBigNumberAsFloat(rewardTokenRate, MARKET_RATE_CONTRACT_DECIMALS);
-};
-
-/**
  * Calculates the amount of profit the bot will make on this swap and if it's profitable or not
  * @returns {Promise} Promise boolean of profitability
  */
 const calculateProfit = async (
   chainId: number,
-  prizePool: Contract,
+  prizePoolContract: Contract,
   rewardsTokenUsd: number,
   withdrawClaimRewardsParams: WithdrawClaimRewardsParams,
   readProvider: Provider,
@@ -184,9 +207,12 @@ const calculateProfit = async (
   printAsterisks();
   console.log(chalk.blue('3. Current gas costs for transaction:'));
 
+  printAsterisks();
+  console.log(chalk.blue('3. Current gas costs for transaction:'));
+
   let estimatedGasLimit;
   try {
-    estimatedGasLimit = await prizePool.estimateGas.withdrawClaimRewards(
+    estimatedGasLimit = await prizePoolContract.estimateGas.withdrawClaimRewards(
       ...Object.values(withdrawClaimRewardsParams),
     );
   } catch (e) {
@@ -218,7 +244,7 @@ const calculateProfit = async (
   printSpacer();
 
   const grossProfitUsd = rewardsTokenUsd;
-  const netProfitUsd = grossProfitUsd - maxFeeUsd;
+  const netProfitUsd = grossProfitUsd - avgFeeUsd;
 
   console.log(chalk.magenta('Gross profit = tokenOut - tokenIn'));
   console.log(
@@ -228,12 +254,12 @@ const calculateProfit = async (
   );
   printSpacer();
 
-  console.log(chalk.magenta('Net profit = Gross profit - Gas fee (Max)'));
+  console.log(chalk.magenta('Net profit = Gross profit - Gas fee (Average)'));
   console.log(
     chalk.greenBright(
       `$${roundTwoDecimalPlaces(netProfitUsd)} = $${roundTwoDecimalPlaces(
         grossProfitUsd,
-      )} - $${roundTwoDecimalPlaces(maxFeeUsd)}`,
+      )} - $${roundTwoDecimalPlaces(avgFeeUsd)}`,
     ),
   );
   printSpacer();
@@ -247,4 +273,13 @@ const calculateProfit = async (
   printSpacer();
 
   return profitable;
+};
+
+const printNote = () => {
+  console.log(chalk.yellow('|*******************************************************|'));
+  console.log(chalk.yellow('|                                                       |'));
+  console.log(chalk.yellow('|      Prize claim rewards can only be claimed by       |'));
+  console.log(chalk.yellow('|      the address with the balanceOfClaimRewards       |'));
+  console.log(chalk.yellow('|                                                       |'));
+  console.log(chalk.yellow('|*******************************************************|'));
 };

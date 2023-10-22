@@ -7,7 +7,7 @@ import {
   liquidatorArbitrageSwap,
   ArbLiquidatorConfigParams,
 } from '@generationsoftware/pt-v5-autotasks-library';
-import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js';
+import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js-beta';
 import { Relayer } from 'defender-relay-client';
 import { DefenderRelayProvider, DefenderRelaySigner } from 'defender-relay-client/lib/ethers';
 

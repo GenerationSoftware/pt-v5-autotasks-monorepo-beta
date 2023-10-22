@@ -1,6 +1,6 @@
 import { ethers, BigNumber, Contract, PopulatedTransaction } from 'ethers';
 import { Provider } from '@ethersproject/providers';
-import { ContractsBlob, getContract } from '@generationsoftware/pt-v5-utils-js';
+import { ContractsBlob, getContract } from '@generationsoftware/pt-v5-utils-js-beta';
 import { Relayer } from 'defender-relay-client';
 import { formatUnits } from '@ethersproject/units';
 import { DefenderRelaySigner } from 'defender-relay-client/lib/ethers';

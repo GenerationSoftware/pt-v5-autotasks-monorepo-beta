@@ -1,5 +1,5 @@
 {
-  "name": "@generationsoftware/pt-v5-autotasks-library",
+  "name": "@generationsoftware/pt-v5-autotasks-library-beta",
   "version": "0.0.1-beta.7",
   "description": "Library of shared utils to run PoolTogether v5 hyperstructure autotasks.",
   "author": "PoolTogether Inc.",

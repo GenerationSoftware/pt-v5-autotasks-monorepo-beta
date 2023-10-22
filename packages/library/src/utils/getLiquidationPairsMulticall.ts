@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 import { Contract } from 'ethers';
 import { Provider } from '@ethersproject/providers';
-import { getEthersMulticallProviderResults } from '@generationsoftware/pt-v5-utils-js';
+import { getEthersMulticallProviderResults } from '@generationsoftware/pt-v5-utils-js-beta';
 
 import { LiquidationPairAbi } from '../abis/LiquidationPairAbi';
 import { LiquidationPairFactoryAbi } from '../abis/LiquidationPairFactoryAbi';

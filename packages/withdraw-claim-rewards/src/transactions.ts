@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { PopulatedTransaction } from '@ethersproject/contracts';
 import { RelayerParams } from 'defender-relay-client';
-import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js';
+import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js-beta';
 import {
   getWithdrawClaimRewardsTx,
   printAsterisks,

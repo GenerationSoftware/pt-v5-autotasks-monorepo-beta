@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/providers';
 import {
   ContractData,
   getEthersMulticallProviderResults,
-} from '@generationsoftware/pt-v5-utils-js';
+} from '@generationsoftware/pt-v5-utils-js-beta';
 import chalk from 'chalk';
 
 import { ArbLiquidatorContext, ArbLiquidatorRelayerContext, Token, TokenWithRate } from '../types';

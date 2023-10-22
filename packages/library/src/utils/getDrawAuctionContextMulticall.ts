@@ -1,7 +1,7 @@
 import { BigNumber, ethers } from 'ethers';
 import { formatUnits } from '@ethersproject/units';
 import { Provider } from '@ethersproject/providers';
-import { getEthersMulticallProviderResults } from '@generationsoftware/pt-v5-utils-js';
+import { getEthersMulticallProviderResults } from '@generationsoftware/pt-v5-utils-js-beta';
 import ethersMulticallProviderPkg from 'ethers-multicall-provider';
 
 import {

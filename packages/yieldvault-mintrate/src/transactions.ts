@@ -1,6 +1,6 @@
 import { Relayer } from 'defender-relay-client';
 import { DefenderRelayProvider } from 'defender-relay-client/lib/ethers';
-import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js';
+import { downloadContractsBlob } from '@generationsoftware/pt-v5-utils-js-beta';
 import { yieldVaultHandleMintRate } from '@generationsoftware/pt-v5-autotasks-library';
 import fetch from 'node-fetch';
 

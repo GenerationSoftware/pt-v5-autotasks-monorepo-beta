@@ -1,5 +1,5 @@
 {
-  "name": "@generationsoftware/pt-v5-autotasks-draw-auction",
+  "name": "@generationsoftware/pt-v5-autotasks-draw-auction-beta",
   "version": "0.0.1",
   "description": "Autotask to automatically start and complete PoolTogether Hyperstructure (v5) prize pool draws.",
   "author": "PoolTogether Inc.",
